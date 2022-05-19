@@ -6,6 +6,7 @@ import torchvision
 import matplotlib.pyplot as plt
 from classifier import ConvNet
 from tqdm import tqdm
+import numpy as np
 import sys
 
 
@@ -69,6 +70,7 @@ def plot_statistics(tr_losses, val_losses, tr_accs, val_accs):
 def main():
     # Set-up
     have_cuda = torch.cuda.is_available()
+    np.random.seed(42)
     torch.manual_seed(42)
     if have_cuda:
         torch.cuda.manual_seed(42)
@@ -98,13 +100,13 @@ def main():
     tr_accs = []
     val_losses = []
     val_accs = []
+    parameters = {
+        "train_loader": train_loader,
+        "validation_loader": validation_loader,
+        "optimizer": optimizer,
+        "criterion": criterion
+    }
     for epoch in range(numEpoch):
-        parameters = {
-            "train_loader": train_loader,
-            "validation_loader": validation_loader,
-            "optimizer": optimizer,
-            "criterion": criterion
-        }
         tr_loss, tr_corr = train_or_validate(net, epoch, parameters, have_cuda, is_training=True)
         val_loss, val_corr = train_or_validate(net, epoch, parameters, have_cuda, is_training=False)
         tr_losses.append(tr_loss)
