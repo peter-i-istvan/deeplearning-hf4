@@ -10,6 +10,32 @@ import numpy as np
 import sys
 
 
+def pad_tensor(vec, pad, dim):
+    """
+    args:
+        vec - tensor to pad
+        pad - the size to pad to
+        dim - dimension to pad
+
+    return:
+        a new tensor padded to 'pad' in dimension 'dim'
+    """
+    pad_size = list(vec.shape)
+    pad_size[dim] = pad - vec.size(dim)
+    return torch.cat([vec, torch.zeros(*pad_size)], dim=dim)
+
+
+def my_collate(batch):
+    max_w = max(map(lambda x: x[0].shape[0], batch))
+    max_h = max(map(lambda x: x[0].shape[1], batch))
+    # pad according to max_len
+    batch = map(lambda x: (pad_tensor(x[0], pad=max_len, dim=0), x[1]), batch)
+    # stack all
+    xs = torch.stack([x[0] for x in batch], dim=0)
+    ys = torch.LongTensor(map(lambda x: x[1], batch))
+    return xs, ys
+
+
 def train_or_validate(net, epoch, parameters, have_cuda=False, is_training=False):
     """
     "parameters" is always a dictionary:
@@ -34,7 +60,7 @@ def train_or_validate(net, epoch, parameters, have_cuda=False, is_training=False
     optimizer = parameters["optimizer"]
     criterion = parameters["criterion"]
     for i, data in enumerate(tqdm(loader, file=sys.stdout), 0):
-        inputs, labels = data
+        inputs, _, labels = data
         if have_cuda:
             inputs, labels = inputs.cuda(), labels.cuda()
         optimizer.zero_grad()
@@ -91,10 +117,14 @@ def main():
     # Data, loaders
     train_transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])  # TODO: add normalize
     validation_transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])  # TODO: add normalize
-    train_set = torchvision.datasets.ImageFolder("db/Classification/train/", train_transform)
-    validation_set = torchvision.datasets.ImageFolder("db/Classification/val/", validation_transform)
-    train_loader = torch.utils.data.DataLoader(train_set, batch_size=128, shuffle=True)
-    validation_loader = torch.utils.data.DataLoader(validation_set, batch_size=128, shuffle=True)
+    # train_set = torchvision.datasets.ImageFolder("db/Classification/train/", train_transform)
+    train_quality = 100
+    validation_quality = 100
+    train_set = torchvision.datasets.ImageFolder(f"db/Birds/train-{train_quality}/", train_transform)
+    # validation_set = torchvision.datasets.ImageFolder("db/Classification/val/", validation_transform)
+    validation_set = torchvision.datasets.ImageFolder(f"db/Birds/validation-{validation_quality}/", validation_transform)
+    train_loader = torch.utils.data.DataLoader(train_set, batch_size=128, collate_fn=my_collate, shuffle=True)
+    validation_loader = torch.utils.data.DataLoader(validation_set, batch_size=128, collate_fn=my_collate, shuffle=True)
     # Training loop
     tr_losses = []
     tr_accs = []

@@ -2,6 +2,7 @@ import cv2
 import os
 import os.path as osp
 import shutil
+import sys
 
 
 def jpeg_compress_demo():
@@ -32,7 +33,7 @@ def create_train_test_split(db_path, images_foldername, train_quality, validatio
     filenames = [-1]  # indexing starts from 1
     with open(osp.join(db_path, "images.txt")) as f:
         lines = f.readlines()
-        filenames.extend([l.split(" ")[1] for l in lines])
+        filenames.extend([l.split(" ")[1].strip() for l in lines])
     # Build a LUT for image_id -> class_id
     class_ids = [-1]
     with open(osp.join(db_path, "image_class_labels.txt")) as f:
@@ -58,18 +59,19 @@ def create_train_test_split(db_path, images_foldername, train_quality, validatio
         for l in lines:
             image_id, is_train = l.split(" ")
             image_id = int(image_id)
-            is_train = bool(is_train)
+            is_train = False if int(is_train) == 0 else True
             if image_id > last_image_id:
                 break
             if is_train:
                 shutil.copyfile(
-                    src=osp.join(train_input_path, images_foldername, filenames[image_id]),
-                    dst=osp.join(train_output_path, f"{class_ids[image_id]}", filenames[image_id].split("/")[1])
+                    src=osp.join(os.environ["PWD"], train_input_path, filenames[image_id]),
+                    dst=osp.join(os.environ["PWD"], train_output_path, f"{class_ids[image_id]}", filenames[image_id].split("/")[1])
                 )
             else:
                 shutil.copyfile(
-                    src=osp.join(validation_input_path, images_foldername, filenames[image_id]),
-                    dst=osp.join(validation_output_path, f"{class_ids[image_id]}", filenames[image_id].split("/")[1])
+                    src=osp.join(os.environ["PWD"], validation_input_path, filenames[image_id]),
+                    dst=osp.join(os.environ["PWD"], validation_output_path, f"{class_ids[image_id]}",
+                                 filenames[image_id].split("/")[1])
                 )
 
 
